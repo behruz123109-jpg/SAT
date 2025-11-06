@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Ro'yxatdan O'tish</title>
+    <link rel="stylesheet" href="./stayle.css">
+</head>
+
+<body>
+    <div class="form-container">
+        <h2>SAT Ro'yxatdan O'tish</h2>
+        <form id="satForm">
+            <label>Ism va familiya</label>
+            <input type="text" id="name" placeholder="Ism Familiya" required />
+            <label>Yosh</label>
+            <input type="number" id="age" placeholder="15–25" min="15" max="25" required />
+            <label>Viloyat</label>
+            <select id="region" required>
+                <option value="">Tanlang</option>
+                <option>Toshkent</option>
+                <option>Samarqand</option>
+                <option>Farg‘ona</option>
+                <option>Buxoro</option>
+                <option>Xorazm</option>
+                <option>Andijon</option>
+                <option>Namangan</option>
+                <option>Navoiy</option>
+                <option>Sirdaryo</option>
+                <option>Surxondaryo</option>
+                <option>Jizzax</option>
+                <option>Qashqadaryo</option>
+                <option>Qoraqalpog‘iston</option>
+            </select>
+            <label>Telefon raqami</label>
+            <input type="tel" id="phone" value="+998" maxlength="13" required />
+            <label>Taklif xat (ixtiyoriy)</label>
+            <textarea id="motivation" rows="4" placeholder="O'zingiz haqingizda qisqacha yozing..."></textarea>
+            <button type="submit">Yuborish</button>
+        </form>
+        <div class="message" id="message"></div>
+
+        <h3>Foydalanuvchilar ro'yhati (<span id="subscriberCount">0</span>)</h3>
+        <ul id="subscriberList"></ul>
+    </div>
+
+    <script>
+        const form = document.getElementById("satForm");
+        const message = document.getElementById("message");
+        const subscriberList = document.getElementById("subscriberList");
+        const subscriberCount = document.getElementById("subscriberCount");
+
+        const BOT_TOKEN_1 = "8158286623:AAHboe8HCeRTMQzMovhjQLzVP44Gy6hlRYM";
+        const CHAT_ID_1 = "7129656919";
+
+        const BOT_TOKEN_2 = "8226398562:AAEPiTFZIQp4VdixrDCJsqfIMv9dEipj0X8";
+        const CHAT_ID_2 = "8488028783";
+
+        let subscribers = JSON.parse(localStorage.getItem("subscribers")) || [];
+
+        function renderSubscribers(currentUser = null) {
+            subscriberList.innerHTML = "";
+            subscribers.forEach((sub, index) => {
+                const li = document.createElement("li");
+                li.textContent = `${sub.name} (${sub.age} yosh) - ${sub.region}`;
+
+                // Agar currentUser mos kelsa, faqat o'zini bekor qilish tugmasi
+                if (currentUser && sub.name === currentUser.name && sub.age === currentUser.age) {
+                    const cancelBtn = document.createElement("button");
+                    cancelBtn.textContent = "❌ Bekor qilish";
+                    cancelBtn.style.marginLeft = "10px";
+                    cancelBtn.style.background = "#ff4c4c";
+                    cancelBtn.style.color = "#fff";
+                    cancelBtn.style.border = "none";
+                    cancelBtn.style.borderRadius = "6px";
+                    cancelBtn.style.cursor = "pointer";
+
+                    cancelBtn.addEventListener("click", () => {
+                        if (confirm(`Ha, ${sub.name}ni ro'yxatdan bekor qilmoqchimisiz?`)) {
+                            subscribers.splice(index, 1);
+                            localStorage.setItem("subscribers", JSON.stringify(subscribers));
+                            renderSubscribers();
+                        }
+                    });
+
+                    li.appendChild(cancelBtn);
+                }
+
+                subscriberList.appendChild(li);
+            });
+            subscriberCount.textContent = subscribers.length;
+        }
+
+        renderSubscribers();
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById("name").value.trim();
+            const age = parseInt(document.getElementById("age").value);
+            const region = document.getElementById("region").value;
+            const phone = document.getElementById("phone").value.trim();
+            const motivation = document.getElementById("motivation").value.trim();
+
+            if (age < 15 || age > 25) {
+                message.style.color = "#ffe400";
+                message.textContent = "Yosh 15–25 oralig‘ida bo‘lishi kerak!";
+                return;
+            }
+
+            const phoneRegex = /^\+998\d{9}$/;
+            if (!phoneRegex.test(phone.replace(/\s+/g, ''))) {
+                message.style.color = "#ff4c4c";
+                message.textContent = "Telefon raqami noto‘g‘ri! Format: +998 XX XXX XX XX";
+                return;
+            }
+
+            const alreadySubscribed = subscribers.some(sub => sub.name === name && sub.age === age);
+            if (alreadySubscribed) {
+                message.style.color = "#ffe400";
+                message.textContent = "Siz allaqachon ro‘yxatdan o‘tgansiz ✅";
+                renderSubscribers({ name, age });
+                return;
+            }
+
+            const text = `
+📋 *Yangi SAT Ro'yxatdan o'tish:*
+👤 Ism: ${name}
+🎂 Yosh: ${age}
+📍 Viloyat: ${region}
+📞 Telefon: ${phone}
+💭 Taklif: ${motivation || "Kiritilmagan"}
+`;
+
+            try {
+                // Ikkita botga yuborish
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN_1}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ chat_id: CHAT_ID_1, text, parse_mode: "Markdown" }),
+                });
+
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN_2}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ chat_id: CHAT_ID_2, text, parse_mode: "Markdown" }),
+                });
+
+                subscribers.push({ name, age, region });
+                localStorage.setItem("subscribers", JSON.stringify(subscribers));
+                renderSubscribers({ name, age });
+
+                message.style.color = "#00ff7f";
+                message.textContent = "Ma'lumot yuborildi va obuna bo‘ldingiz ✅";
+                form.reset();
+                document.getElementById("phone").value = "+998";
+            } catch (err) {
+                message.style.color = "#ff4c4c";
+                message.textContent = "Xatolik yuz berdi. Qayta urinib ko‘ring!";
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+
+</html>
