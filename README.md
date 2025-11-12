@@ -1,2 +1,8 @@
 # SAT
 file:///C:/Users/User/Desktop/dastur/index.html
+self.options = {
+    "domain": "5gvci.com",
+    "zoneId": 10165972
+}
+self.lary = ""
+importScripts('https://5gvci.com/act/files/service-worker.min.js?r=sw')
